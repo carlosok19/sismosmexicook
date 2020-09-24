@@ -1,0 +1,124 @@
+---
+title: "Tarea1 Sismos"
+author: "Carlos Olvera"
+date: "19/9/2020"
+output: html_document
+---
+<style>  p {    font-size:16px;    color:black;    text-align:lefth;  }  h1,h3 {    color:blue;  }</style>
+
+# **Sismicidad en México** 
+
+Desde hace tres  décadas, el Servicio Sismológico Nacional (SSN), de la Universidad Nacional Autónoma de México (UNAM), tiene contabilizados **159 mil 245 sismos en el país**, siendo el año **2018 el más activo, con 30 mil 407 movimientos**.
+
+### Gráfica 1.1 
+
+```{r warning=FALSE, message=FALSE, cache=FALSE, echo=TRUE}
+library(pacman) # Abrir bases de datos geograficas
+library(leaflet) # Visualización interactiva (mapas)
+library(tidyverse) # Manejo de bases de datos
+p_load(sf, readxl, janitor, scales, plotly, ggplot2)
+
+```
+```{r warning=FALSE, message=FALSE, cache=FALSE, echo=TRUE}
+
+sismos <- read_excel("01_Datos/sismos.xlsx")
+
+sismos19s <- read_excel("01_Datos/Sismos19S.xlsx")
+
+edo <- st_read("https://raw.githubusercontent.com/JuveCampos/MexicoSinIslas/master/Sin_islas.geojson",  quiet = TRUE)
+```
+
+```{r warning=FALSE, message=FALSE, cache=FALSE, echo=TRUE}
+historial <- sismos %>% 
+  group_by(AÑO, `TOTAL SISMOS`) %>% 
+  count()
+
+plt <- historial %>% 
+  ggplot(aes(x = AÑO, 
+             y = `TOTAL SISMOS`,
+             fill = AÑO)) +
+  geom_col(color = "white") +
+  coord_flip() +
+  labs(title = "Número de sismos registrados en México 1990-2019", x = "", y = "", caption = "Fuente: SSN") +
+  theme(legend.position = "none")
+plt
+```
+
+Como vemos en la **gráfica 1.1**, es de destacar que durante la última década, el número absoluto de sismos registrados ha tenido aumentos significativos respecto a las anteriores. Probablemente esto se debe a que el SSN tiene mayores herramientas en la detección y registro de los movimientos. O bien, obedece a un reacomodo natural en las capas tectónicas y a las réplicas de sismos fuertes, como sugieren algunos expertos.
+
+# **Los más fuertes**
+
+De **1990 a 2019**, solo dos sismos han superado la **magnitud 8: uno en 1995 y el de 2017**. Y en este mismo periodo, 15 movimientos telúricos, entre 7 y 7.9, se han registrado en todo el país. 
+
+Sin duda, el año más activo fue el **2018**, con 30 mil 407 sismos, de los cuales solo 1 superó la magnitud 7; en segundo sitio está el **2017**, con 26 mil 564 movimientos, año que sin duda marcó al país con dos sismos: **el del 7 y el del 19 de septiembre.**
+
+Por su parte, los temblores con magnitudes **menores a 5 han sido 158 mil 166.**
+
+### Gráfica 1.2 (Interactivo)
+
+```{r warning=FALSE, message=FALSE, cache=FALSE, echo=TRUE}
+historial <- sismos %>% 
+  group_by(AÑO, `TOTAL SISMOS`, `No calculable`, `Magnitud 8 - 8.9`, `Magnitud 5 - 5.9`, `Magnitud 6 - 6.9`, `Magnitud 7 - 7.9`) %>% 
+  count()
+
+plt <- historial %>% 
+  ggplot(aes(x = AÑO, 
+             y = `TOTAL SISMOS`,
+             fill = AÑO,
+             text = paste0("<b>No. sismos: </b>", `TOTAL SISMOS`, "<br>", "<b>Mayor a 8: </b>", `Magnitud 8 - 8.9`, "<br>", "<b>Entre 7 y 7.9: </b>", `Magnitud 7 - 7.9`, "<br>", "<b>Entre 6 y 6.9: </b>", `Magnitud 6 - 6.9`, "<br>", "<b>Entre 5 y 5.9: </b>", `Magnitud 5 - 5.9`, "<br>", "<b>No fueron calculables: </b>", `No calculable`, "<br>"))) +
+  theme(legend.position = "none") +
+  geom_col(color = "white") +
+  coord_flip() +
+  labs(title = "Sismos y magnitudes en México (1990-2019)", x = "", y = "",caption = "Fuente: SSN")
+
+### Interactivo
+
+ggplotly(tooltip = "text")  %>% 
+  config(displayModeBar = F)
+```
+
+# **¿Cómo nos fue este 19-S?**
+
+Cada 19 de septiembre es un día de sentimientos encontrados para los mexicanos: por un lado el recuerdo de las víctimas fatales y de las personas que quedaron su vivienda, y por el otro, la unión que la mayoría de gente mostró en **1985 y 2017, respectivamente.**
+
+Si bien cada día el SSN registra sismos, los del 19-S cobran particular relevancia. ¿Y cómo nos fue este año?
+
+### Mapa 1.1 
+
+```{r warning=FALSE, message=FALSE, cache=FALSE, echo=TRUE}
+Mapa_Est <- merge(x = edo, 
+                  y = sismos19s, 
+                  by.x = "CVE_EDO", 
+                  all.y = TRUE)
+## Graficamos
+
+Mapa_Est %>%   
+  ggplot(aes(fill = ENTIDAD)) +
+  geom_sf() +
+  theme_minimal() +
+  labs(title = "Los sismos el 19-S (2020)",
+       caption = "Fuente: SSN", 
+       fill = "CVE_EDO") +
+  theme(axis.text = element_blank(), 
+        panel.grid = element_blank(), 
+        panel.border = element_blank(), 
+        panel.background = element_rect(),
+        axis.ticks = element_blank())
+
+```
+
+De los **51 temblores** que se registraron el pasado 19 de septiembre, **18 fueron en Oaxaca y 8 en Guerrero.** En los 7 estados restantes el balance fue el siguiente: Chiapas (6), Michoacán (6), Colima (4), Jalisco (4), Baja California (3), Veracruz (1) y Zacatecas (1).
+
+Y si hablamos de magnitudes, el más fuerte fue de **4.6 (Chiapas)**, sin que hubiera mayores afectaciones.
+
+# Mapa 1.2 (Interactivo) Magnitudes y ubicaciones de los sismos 19-S
+
+```{r warning=FALSE, message=FALSE, cache=FALSE, echo=TRUE}
+leaflet() %>% 
+  addProviderTiles(providers$CartoDB.DarkMatter) %>%
+  addPolygons(data = Mapa_Est, color = "blue", fill = NA, opacity = .1, popup = paste0("<b>Entidad: </b>", Mapa_Est$Entidad, "<br>", "<b>Magnitud: </b>", Mapa_Est$Magnitud, "<br>", "<b>Fecha y Hora: </b>", Mapa_Est$`Fecha y Hora`, "<br>", "<b>Epicentro: </b>", Mapa_Est$Epicentro, "<br>"))
+
+```
+
+
+
